@@ -1,5 +1,5 @@
 export interface MessageProvider {
-  send(message: string, recipient: string): Promise<MessageResult>
+  send(message: string, recipient?: string): Promise<MessageResult>
   isAvailable(): boolean
   getName(): string
 }

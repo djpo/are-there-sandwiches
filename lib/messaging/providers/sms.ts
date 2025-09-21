@@ -1,8 +1,10 @@
-import twilio from 'twilio'
+/* eslint-disable @typescript-eslint/no-require-imports */
+/* eslint-disable @typescript-eslint/no-explicit-any */
+const twilio = require('twilio')
 import { MessageProvider, MessageResult, MessageConfig } from '../types'
 
 export class SMSProvider implements MessageProvider {
-  private client: twilio.Twilio
+  private client: any
   private fromNumber: string
 
   constructor(private config: MessageConfig) {
