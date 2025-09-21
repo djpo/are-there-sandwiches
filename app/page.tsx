@@ -1,12 +1,14 @@
 "use client";
 
 import { useState } from "react";
+import SandwichRain from "@/components/SandwichRain";
 
 type Channel = "sms" | "whatsapp";
 
 export default function Home() {
   const [channel, setChannel] = useState<Channel>("sms");
   const [loading, setLoading] = useState(false);
+  const [rainTriggerCount, setRainTriggerCount] = useState(0);
   const [message, setMessage] = useState<{
     type: "success" | "error";
     text: string;
@@ -15,6 +17,7 @@ export default function Home() {
   const requestSandwiches = async () => {
     setLoading(true);
     setMessage(null);
+    setRainTriggerCount(prev => prev + 1); // Increment to trigger new rain
 
     try {
       const response = await fetch("/api/send-message", {
@@ -41,8 +44,10 @@ export default function Home() {
   };
 
   return (
-    <main className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-orange-50 to-yellow-50 p-4">
-      <div className="w-full max-w-md space-y-8">
+    <>
+      <SandwichRain triggerCount={rainTriggerCount} />
+      <main className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-orange-50 to-yellow-50 p-4">
+        <div className="w-full max-w-md space-y-8">
         <div className="text-center">
           <h1 className="text-4xl font-bold text-gray-800 mb-2">
             Are There Sandwiches?
@@ -126,6 +131,7 @@ export default function Home() {
           )}
         </div>
       </div>
-    </main>
+      </main>
+    </>
   );
 }
