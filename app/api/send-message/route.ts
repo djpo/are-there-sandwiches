@@ -63,12 +63,21 @@ export async function POST(request: NextRequest) {
     // Increment counter - use Vercel KV if available, otherwise local counter
     let totalCount: number
 
+    // Check if KV credentials are available
+    const hasKV = process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN
+    console.log('KV Status:', hasKV ? 'Configured' : 'Not configured')
+
     try {
-      // Try to use Vercel KV (will work when deployed to Vercel with KV configured)
-      totalCount = await kv.incr('sandwich_requests_total') // Atomic increment
+      if (hasKV) {
+        // Try to use Vercel KV (will work when deployed to Vercel with KV configured)
+        totalCount = await kv.incr('sandwich_requests_total') // Atomic increment
+        console.log('Successfully used KV, count:', totalCount)
+      } else {
+        throw new Error('KV not configured')
+      }
     } catch (kvError) {
       // Fallback to local counter for development
-      console.log('Using local counter (KV not configured)')
+      console.log('Using local counter (KV error):', kvError)
       localCounter++
       totalCount = localCounter
     }
