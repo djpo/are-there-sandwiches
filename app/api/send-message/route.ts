@@ -1,8 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { MessagingService } from '@/lib/messaging/service'
 import { Channel, MessageConfig } from '@/lib/messaging/types'
+import { kv } from '@vercel/kv'
 
 // No rate limiting - maximum sandwich chaos!
+
+// Fallback in-memory counter for local development
+let localCounter = 0
 
 export async function POST(request: NextRequest) {
   try {
@@ -56,10 +60,24 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Increment counter - use Vercel KV if available, otherwise local counter
+    let totalCount: number
+
+    try {
+      // Try to use Vercel KV (will work when deployed to Vercel with KV configured)
+      totalCount = await kv.incr('sandwich_requests_total') // Atomic increment
+    } catch (kvError) {
+      // Fallback to local counter for development
+      console.log('Using local counter (KV not configured)')
+      localCounter++
+      totalCount = localCounter
+    }
+
     return NextResponse.json({
       success: true,
       messageId: result.messageId,
-      provider: result.provider
+      provider: result.provider,
+      totalCount
     })
   } catch (error) {
     console.error('Error in send-message API:', error)

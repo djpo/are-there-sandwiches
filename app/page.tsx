@@ -11,6 +11,7 @@ export default function Home() {
   const [channel, setChannel] = useState<Channel>("sms");
   const [loading, setLoading] = useState(false);
   const [rainTriggerCount, setRainTriggerCount] = useState(0);
+  const [totalCount, setTotalCount] = useState<number | null>(null);
   const [message, setMessage] = useState<{
     type: "success" | "error";
     text: string;
@@ -52,7 +53,7 @@ export default function Home() {
       setTimeout(() => {
         setPageState("requesting");
       }, 1500); // Show NO for 1.5 seconds before showing request button
-    }, 2000); // Show checking animation for 2 seconds
+    }, 2800); // Show thinking animation for 2.8 seconds
   };
 
   const requestSandwiches = async () => {
@@ -71,6 +72,11 @@ export default function Home() {
 
       if (!response.ok) {
         throw new Error(data.error || "Failed to send message");
+      }
+
+      // Update total count from response
+      if (data.totalCount) {
+        setTotalCount(data.totalCount);
       }
 
       setMessage({ type: "success", text: "🥪 Sandwich request sent!" });
@@ -122,12 +128,12 @@ export default function Home() {
         )}
 
         {pageState === "checking" && (
-          <div className="text-center space-y-8 animate-fade-in">
-            <h2 className="text-3xl md:text-4xl text-gray-700">Checking for sandwiches</h2>
-            <div className="flex justify-center space-x-4">
-              <span className="text-6xl animate-pulse animation-delay-0">.</span>
-              <span className="text-6xl animate-pulse animation-delay-200">.</span>
-              <span className="text-6xl animate-pulse animation-delay-400">.</span>
+          <div className="text-center space-y-12 animate-fade-in">
+            <h2 className="text-4xl md:text-5xl font-bold text-gray-800">Thinking</h2>
+            <div className="flex justify-center items-center space-x-6">
+              <div className="w-10 h-10 md:w-14 md:h-14 bg-orange-400 rounded-full animate-scale-sequence animation-delay-0"></div>
+              <div className="w-10 h-10 md:w-14 md:h-14 bg-yellow-400 rounded-full animate-scale-sequence animation-delay-500"></div>
+              <div className="w-10 h-10 md:w-14 md:h-14 bg-orange-400 rounded-full animate-scale-sequence animation-delay-1000"></div>
             </div>
           </div>
         )}
@@ -211,6 +217,13 @@ export default function Home() {
               "🥪 Demand Sandwiches NOW!"
             )}
           </button>
+
+          {totalCount !== null && (
+            <div className="text-center text-gray-600 mt-4">
+              <p className="text-sm">Total sandwich requests sent to Noah:</p>
+              <p className="text-3xl font-bold text-orange-500">{totalCount}</p>
+            </div>
+          )}
 
           {message && (
             <div
