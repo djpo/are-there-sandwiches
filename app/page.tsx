@@ -1,18 +1,59 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import SandwichRain from "@/components/SandwichRain";
 
 type Channel = "sms" | "whatsapp";
+type PageState = "asking" | "checking" | "no" | "requesting";
 
 export default function Home() {
+  const [pageState, setPageState] = useState<PageState>("asking");
   const [channel, setChannel] = useState<Channel>("sms");
   const [loading, setLoading] = useState(false);
   const [rainTriggerCount, setRainTriggerCount] = useState(0);
   const [message, setMessage] = useState<{
     type: "success" | "error";
     text: string;
+    isRateLimited?: boolean;
+    secondsLeft?: number;
+    baseMessage?: string;
   } | null>(null);
+
+  // Countdown timer effect for rate limit messages
+  useEffect(() => {
+    if (message?.isRateLimited && message.secondsLeft && message.secondsLeft > 0) {
+      console.log('Setting up countdown timer, current seconds:', message.secondsLeft);
+      const timer = setTimeout(() => {
+        setMessage(prev => {
+          if (!prev || !prev.isRateLimited || !prev.secondsLeft) return prev;
+          const newSeconds = prev.secondsLeft - 1;
+          console.log('Countdown tick:', newSeconds);
+          if (newSeconds <= 0) {
+            return null; // Clear message when countdown reaches 0
+          }
+          // Update the message with new seconds count - handle both abbreviated "30s" and full "30 seconds"
+          const updatedText = prev.text.replace(/\d+\s*s(?:econds?)?/g, `${newSeconds}s`);
+          return {
+            ...prev,
+            text: updatedText,
+            secondsLeft: newSeconds
+          };
+        });
+      }, 1000);
+
+      return () => clearTimeout(timer);
+    }
+  }, [message?.secondsLeft]); // Only re-run when secondsLeft changes
+
+  const checkForSandwiches = () => {
+    setPageState("checking");
+    setTimeout(() => {
+      setPageState("no");
+      setTimeout(() => {
+        setPageState("requesting");
+      }, 1500); // Show NO for 1.5 seconds before showing request button
+    }, 2000); // Show checking animation for 2 seconds
+  };
 
   const requestSandwiches = async () => {
     setLoading(true);
@@ -34,10 +75,29 @@ export default function Home() {
 
       setMessage({ type: "success", text: "🥪 Sandwich request sent!" });
     } catch (error) {
-      setMessage({
-        type: "error",
-        text: error instanceof Error ? error.message : "Something went wrong",
-      });
+      const errorMessage = error instanceof Error ? error.message : "Something went wrong";
+      console.log('Error message received:', errorMessage);
+
+      // Check if it's a rate limit error with seconds (handles both "30 seconds" and "30s")
+      const secondsMatch = errorMessage.match(/(\d+)\s*s(?:econds?)?/);
+      console.log('Seconds match result:', secondsMatch);
+
+      if (secondsMatch) {
+        const seconds = parseInt(secondsMatch[1]);
+        console.log('Rate limit detected, starting countdown from:', seconds);
+        setMessage({
+          type: "error",
+          text: errorMessage,
+          isRateLimited: true,
+          secondsLeft: seconds,
+          baseMessage: errorMessage
+        });
+      } else {
+        setMessage({
+          type: "error",
+          text: errorMessage,
+        });
+      }
     } finally {
       setLoading(false);
     }
@@ -47,12 +107,46 @@ export default function Home() {
     <>
       <SandwichRain triggerCount={rainTriggerCount} />
       <main className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-orange-50 to-yellow-50 p-4">
+        {pageState === "asking" && (
+          <div className="w-full max-w-2xl space-y-12 text-center animate-fade-in">
+            <h1 className="text-5xl md:text-7xl font-bold text-gray-800">
+              Are there sandwiches<br />right now?
+            </h1>
+            <button
+              onClick={checkForSandwiches}
+              className="px-8 py-4 text-2xl md:text-3xl font-bold bg-gradient-to-r from-orange-400 to-yellow-400 text-white rounded-2xl hover:from-orange-500 hover:to-yellow-500 transform hover:scale-105 transition-all shadow-xl"
+            >
+              🥪 Check
+            </button>
+          </div>
+        )}
+
+        {pageState === "checking" && (
+          <div className="text-center space-y-8 animate-fade-in">
+            <h2 className="text-3xl md:text-4xl text-gray-700">Checking for sandwiches</h2>
+            <div className="flex justify-center space-x-4">
+              <span className="text-6xl animate-pulse animation-delay-0">.</span>
+              <span className="text-6xl animate-pulse animation-delay-200">.</span>
+              <span className="text-6xl animate-pulse animation-delay-400">.</span>
+            </div>
+          </div>
+        )}
+
+        {pageState === "no" && (
+          <div className="animate-bounce-in">
+            <h1 className="text-8xl md:text-9xl font-black text-red-600">
+              NO
+            </h1>
+          </div>
+        )}
+
+        {pageState === "requesting" && (
         <div className="w-full max-w-md space-y-8">
         <div className="text-center">
-          <h1 className="text-4xl font-bold text-gray-800 mb-2">
-            Are There Sandwiches?
+          <h1 className="text-4xl font-bold text-gray-800 mb-4">
+            Still no sandwiches? 😢
           </h1>
-          <p className="text-gray-600">Let them know you want sandwiches!</p>
+          <p className="text-xl text-gray-600">Send a <span className="font-bold text-orange-500 text-2xl">REAL</span> text message to Noah<br/>to demand sandwiches NOW!</p>
         </div>
 
         <div className="bg-white rounded-2xl shadow-xl p-8 space-y-6">
@@ -114,7 +208,7 @@ export default function Home() {
                 Sending...
               </span>
             ) : (
-              "🥪 Request Sandwiches!"
+              "🥪 Demand Sandwiches NOW!"
             )}
           </button>
 
@@ -131,6 +225,7 @@ export default function Home() {
           )}
         </div>
       </div>
+      )}
       </main>
     </>
   );
